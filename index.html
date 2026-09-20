@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>持仓成本计算器</title>
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --paper:#EDF0F2;
+  --card:#F7F9FA;
+  --ink:#16222B;
+  --ink2:#4A5B67;
+  --ink3:#8496A2;
+  --rule:#CFD8DE;
+  --rule2:#E2E8EC;
+  --brass:#A8813F;
+  --jade:#1F6F5C;
+  --rust:#A6453C;
+  --sans:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --song:"Songti SC","STSong","SimSun",serif;
+  --num:ui-monospace,"SF Mono",Menlo,"Cascadia Mono",monospace;
+}
+:root:not([data-theme="light"]){ }
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#131A20; --card:#1A232B; --ink:#E6EDF2; --ink2:#A9BAC6; --ink3:#71838F;
+    --rule:#2C3841; --rule2:#232E36; --brass:#C9A15C; --jade:#4DAE91; --rust:#D47066;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#131A20; --card:#1A232B; --ink:#E6EDF2; --ink2:#A9BAC6; --ink3:#71838F;
+  --rule:#2C3841; --rule2:#232E36; --brass:#C9A15C; --jade:#4DAE91; --rust:#D47066;
+}
+*,*::before,*::after{box-sizing:inherit}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--sans); font-size:16px; line-height:1.7;
+  -webkit-text-size-adjust:100%;
+}
+.wrap{max-width:660px; margin:0 auto; padding:34px 20px 64px}
+
+header{margin-bottom:26px}
+h1{
+  font-family:var(--song); font-weight:700;
+  font-size:26px; letter-spacing:.14em; margin:0 0 6px;
+}
+.lede{color:var(--ink2); font-size:14.5px; margin:0; max-width:46ch}
+
+form{
+  background:var(--card); border:1px solid var(--rule);
+  border-radius:3px; padding:20px 20px 16px; margin-bottom:22px;
+}
+.grid{display:grid; grid-template-columns:1fr 1fr; gap:14px 16px}
+@media (max-width:520px){ .grid{grid-template-columns:1fr} }
+label{display:flex; flex-direction:column; gap:5px}
+.lbl{font-size:13px; color:var(--ink2); letter-spacing:.02em}
+.unit{color:var(--ink3); font-weight:400}
+input,select{
+  font-family:var(--num); font-size:19px; font-variant-numeric:tabular-nums;
+  color:var(--ink); background:var(--paper);
+  border:1px solid var(--rule); border-radius:2px;
+  padding:9px 11px; width:100%;
+}
+select{font-family:var(--sans)}
+input:focus-visible,select:focus-visible{outline:2px solid var(--brass); outline-offset:1px; border-color:var(--brass)}
+.chips{display:flex; gap:7px; margin-top:8px; flex-wrap:wrap}
+.chip{
+  font-family:var(--num); font-size:13px; color:var(--ink2);
+  background:transparent; border:1px solid var(--rule);
+  border-radius:2px; padding:3px 11px; cursor:pointer;
+}
+.chip:hover{border-color:var(--brass); color:var(--brass)}
+.chip:focus-visible{outline:2px solid var(--brass); outline-offset:1px}
+
+.go{
+  margin-top:16px; width:100%;
+  font-family:var(--sans); font-size:16px; letter-spacing:.06em;
+  color:var(--paper); background:var(--ink);
+  border:0; border-radius:2px; padding:12px; cursor:pointer;
+}
+.go:hover{background:var(--brass)}
+.go:focus-visible{outline:2px solid var(--brass); outline-offset:2px}
+
+.answer{margin-bottom:8px}
+.sentence{
+  font-size:19px; line-height:1.9; margin:0 0 4px;
+  border-left:3px solid var(--brass); padding-left:15px;
+}
+.big{
+  font-family:var(--num); font-variant-numeric:tabular-nums;
+  font-size:46px; font-weight:700; letter-spacing:-.02em;
+  line-height:1.1; display:inline-block; vertical-align:-4px;
+  margin:0 4px;
+}
+.big.sell{color:var(--rust)}
+.big.buy{color:var(--jade)}
+.note{color:var(--ink2); font-size:14px; padding-left:18px; margin:6px 0 0}
+.warn{
+  border-left:3px solid var(--rust); padding:10px 15px;
+  color:var(--rust); font-size:15px; background:var(--card); border-radius:2px;
+}
+.done{
+  border-left:3px solid var(--jade); padding:10px 15px;
+  color:var(--jade); font-size:16px; background:var(--card); border-radius:2px;
+}
+
+table{width:100%; border-collapse:collapse; margin-top:22px; font-size:15px}
+caption{
+  text-align:left; font-family:var(--song); letter-spacing:.14em;
+  color:var(--ink2); font-size:14px; padding-bottom:9px;
+}
+th,td{padding:9px 6px; border-bottom:1px solid var(--rule2); text-align:right}
+th:first-child,td:first-child{text-align:left}
+th{font-weight:400; color:var(--ink3); font-size:13px; border-bottom:1px solid var(--rule)}
+td.n{font-family:var(--num); font-variant-numeric:tabular-nums}
+
+@media (max-width:520px){
+  table{font-size:13.5px}
+  th,td{padding:8px 3px}
+  td:first-child{white-space:nowrap}
+  .big{font-size:38px}
+  .sentence{font-size:17px}
+}
+footer{
+  margin-top:34px; padding-top:16px; border-top:1px solid var(--rule2);
+  color:var(--ink3); font-size:12.5px; line-height:1.8;
+}
+.hide{display:none}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>持仓成本计算器</h1>
+  <p class="lede">选好标的，填入持股与成本，算出要卖掉多少股才能把剩余持仓的成本降到目标位；成本已经够低时，反过来算还能补回多少股。</p>
+</header>
+
+<form id="f" novalidate>
+  <label style="margin-bottom:14px"><span class="lbl">标的</span>
+    <select id="k"><option value="">读取中…</option></select></label>
+  <div class="grid">
+    <label><span class="lbl">持股数量 <span class="unit">股</span></span>
+      <input id="qty" type="number" inputmode="decimal" step="100" placeholder="10000"></label>
+    <label><span class="lbl">持仓成本 <span class="unit">元 / 股</span></span>
+      <input id="cost" type="number" inputmode="decimal" step="0.001" placeholder="6.500"></label>
+    <label><span class="lbl">当前股价 <span class="unit">元</span></span>
+      <input id="px" type="number" inputmode="decimal" step="0.001" placeholder="6.900"></label>
+  </div>
+  <button class="go" type="submit">计算</button>
+</form>
+
+<section id="out" class="hide" aria-live="polite"></section>
+
+<footer>
+  纯算术工具，不含任何投资建议，也不保存你填写的数据。<br>
+  计算未计入交易费用与税费；卖出与买入股数已取整到 100 股。
+</footer>
+
+</div>
+
+<script>
+(function(){
+  var API="https://snowy-wood-bf1d.asd781568228.workers.dev";
+
+  var $=function(id){return document.getElementById(id);};
+  var f=$("f"), out=$("out"), sel=$("k");
+
+  fetch(API+"/list").then(function(r){return r.json();}).then(function(d){
+    sel.innerHTML="";
+    (d.list||[]).forEach(function(x){
+      var o=document.createElement("option"); o.value=x.k; o.textContent=x.name; sel.appendChild(o);
+    });
+  }).catch(function(){ sel.innerHTML='<option value="">读取失败，稍后再试</option>'; });
+
+  function num(id){ var v=parseFloat($(id).value); return isFinite(v)?v:NaN; }
+  function fmt(n,d){ return n.toLocaleString("zh-CN",{minimumFractionDigits:d||0,maximumFractionDigits:d||0}); }
+  function esc(s){ return String(s).replace(/[&<>]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;"}[c];}); }
+
+  f.addEventListener("submit",function(e){ e.preventDefault(); run(); });
+
+  function run(){
+    var k=sel.value, N=num("qty"), C=num("cost"), P=num("px");
+    out.classList.remove("hide");
+    if(!k){ out.innerHTML='<div class="warn">先选一个标的。</div>'; return; }
+    if(!(N>0)||!(C>0)||!(P>0)){ out.innerHTML='<div class="warn">三项都要填，而且都得大于 0。</div>'; return; }
+
+    out.innerHTML='<div class="note" style="padding-left:0">计算中…</div>';
+    fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({k:k,qty:N,cost:C,px:P})})
+      .then(function(r){return r.json();})
+      .then(function(d){ out.innerHTML = render(d,N,C,P); })
+      .catch(function(){ out.innerHTML='<div class="warn">连不上服务，检查网络后再试。</div>'; });
+  }
+
+  function render(d,N,C,P){
+    if(d.error) return '<div class="warn">'+esc(d.error)+'</div>';
+    if(d.mode==="eq")
+      return '<div class="done">成本正好在目标位 '+d.tgt.toFixed(3)+' 元，不用动。</div>';
+    if(d.mode==="impossible")
+      return '<div class="warn">现价 '+d.px.toFixed(3)+' 元不高于目标成本 '+d.tgt.toFixed(3)
+           + ' 元。此时卖出只会把剩余成本推得更高，这个目标在当前价位做不到。</div>';
+    if(d.mode==="toomuch")
+      return '<div class="warn">需要卖出的股数已经超过你的持股总数。等股价再高一些才有可能。</div>';
+    if(d.mode==="free")
+      return '<div class="done">现价 '+d.px.toFixed(3)+' 元已经低于目标成本 '+d.tgt.toFixed(3)
+           + ' 元，这个价位再买多少，成本都不会超过目标位。</div>';
+
+    var isSell = d.mode==="sell";
+    var h = '<div class="answer"><p class="sentence">'
+      + (isSell
+        ? '卖出 <span class="big sell">'+fmt(d.shares)+'</span> 股，留下的 <b>'+fmt(d.after)+'</b> 股成本降到 <b>'+d.tgt.toFixed(3)+'</b> 元。'
+        : '还能补进 <span class="big buy">'+fmt(d.shares)+'</span> 股，合计 <b>'+fmt(d.after)+'</b> 股的成本仍是 <b>'+d.tgt.toFixed(3)+'</b> 元。')
+      + '</p><p class="note">'
+      + (isSell
+        ? '套现约 '+fmt(d.cash)+' 元，其中盈亏 '+(d.pl>=0?"+":"")+fmt(d.pl)+' 元。'
+        : '需要投入约 '+fmt(d.cash)+' 元。')
+      + '</p></div>';
+
+    h += '<table><caption>前后对照</caption><thead><tr><th></th><th>股数</th><th>成本</th><th>年分红</th></tr></thead><tbody>'
+      + '<tr><td>现在的持股</td><td class="n">'+fmt(N)+' 股</td><td class="n">'+C.toFixed(3)+' 元</td><td class="n">'+fmt(d.divNow)+' 元</td></tr>'
+      + '<tr><td>操作之后</td><td class="n">'+fmt(d.after)+' 股</td><td class="n">'+d.tgt.toFixed(3)+' 元</td><td class="n">'+fmt(d.divAfter)+' 元</td></tr>'
+      + '</tbody></table>';
+    return h;
+  }
+})();
+</script>
+</body>
+</html>
