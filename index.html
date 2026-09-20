@@ -137,7 +137,6 @@ footer{
 
 <header>
   <h1>持仓成本计算器</h1>
-  <p class="lede">当你想减仓但是又不知道该留多少底仓的时候，可以在这里计算下</p>
   <p class="lede">选好标的，填入持股与成本，算出要卖掉多少股才能把剩余持仓的成本降到目标位；成本已经够低时，反过来算还能补回多少股。</p>
 </header>
 
@@ -166,17 +165,40 @@ footer{
 
 <script>
 (function(){
-  var API="https://snowy-wood-bf1d.asd781568228.workers.dev";
+  var DATA=[
+    {k:"601665",name:"齐鲁银行",dps:0.2988},
+    {k:"002948",name:"青岛银行",dps:0.2125},
+    {k:"002142",name:"宁波银行",dps:1.5000},
+    {k:"601838",name:"成都银行",dps:0.9700},
+    {k:"600926",name:"杭州银行",dps:0.7920},
+    {k:"600919",name:"江苏银行",dps:0.5641},
+    {k:"601963",name:"重庆银行",dps:0.4590},
+    {k:"002966",name:"苏州银行",dps:0.3600},
+    {k:"601009",name:"南京银行",dps:0.5291},
+    {k:"601577",name:"长沙银行",dps:0.4825},
+    {k:"601939",name:"建设银行",dps:0.3851},
+    {k:"601288",name:"农业银行",dps:0.2321},
+    {k:"601988",name:"中国银行",dps:0.2399},
+    {k:"601398",name:"工商银行",dps:0.3029},
+    {k:"601328",name:"交通银行",dps:0.3361},
+    {k:"601658",name:"邮储银行",dps:0.2285},
+    {k:"601998",name:"中信银行",dps:0.3600},
+    {k:"600036",name:"招商银行",dps:2.0160},
+    {k:"600941",name:"中国移动",dps:4.7037},
+    {k:"601318",name:"中国平安",dps:2.7300},
+    {k:"601088",name:"中国神华",dps:2.0100},
+    {k:"600938",name:"中国海油",dps:1.2950},
+    {k:"601857",name:"中国石油",dps:0.5100},
+  ];
+  var K=0.06;
 
   var $=function(id){return document.getElementById(id);};
   var f=$("f"), out=$("out"), sel=$("k");
 
-  fetch(API+"/list").then(function(r){return r.json();}).then(function(d){
-    sel.innerHTML="";
-    (d.list||[]).forEach(function(x){
-      var o=document.createElement("option"); o.value=x.k; o.textContent=x.name; sel.appendChild(o);
-    });
-  }).catch(function(){ sel.innerHTML='<option value="">读取失败，稍后再试</option>'; });
+  sel.innerHTML="";
+  DATA.forEach(function(x){
+    var o=document.createElement("option"); o.value=x.k; o.textContent=x.name; sel.appendChild(o);
+  });
 
   function num(id){ var v=parseFloat($(id).value); return isFinite(v)?v:NaN; }
   function fmt(n,d){ return n.toLocaleString("zh-CN",{minimumFractionDigits:d||0,maximumFractionDigits:d||0}); }
@@ -190,12 +212,26 @@ footer{
     if(!k){ out.innerHTML='<div class="warn">先选一个标的。</div>'; return; }
     if(!(N>0)||!(C>0)||!(P>0)){ out.innerHTML='<div class="warn">三项都要填，而且都得大于 0。</div>'; return; }
 
-    out.innerHTML='<div class="note" style="padding-left:0">计算中…</div>';
-    fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({k:k,qty:N,cost:C,px:P})})
-      .then(function(r){return r.json();})
-      .then(function(d){ out.innerHTML = render(d,N,C,P); })
-      .catch(function(){ out.innerHTML='<div class="warn">连不上服务，检查网络后再试。</div>'; });
+    out.innerHTML = render(compute(k,N,C,P), N, C, P);
+  }
+
+  function compute(k,N,C,P){
+    var it=null; DATA.forEach(function(x){ if(x.k===k) it=x; });
+    if(!it) return {error:"标的不存在"};
+    var D=it.dps, tgt=D/K;
+    if(Math.abs(C-tgt)<0.0005) return {mode:"eq",tgt:tgt,name:it.name};
+    if(C>tgt){
+      if(P<=tgt) return {mode:"impossible",tgt:tgt,px:P,name:it.name};
+      var S=N*(C-tgt)/(P-tgt);
+      if(S>=N) return {mode:"toomuch",tgt:tgt,name:it.name};
+      var keep=Math.floor((N-S)/100)*100;
+      return {mode:"sell",name:it.name,tgt:tgt,shares:Math.ceil(S/100)*100,after:keep,
+              cash:S*P,pl:S*(P-C),divNow:N*D,divAfter:keep*D,costNow:C};
+    }
+    if(P<=tgt) return {mode:"free",tgt:tgt,px:P,name:it.name};
+    var B=N*(tgt-C)/(P-tgt), buy=Math.floor(B/100)*100, tot=N+buy;
+    return {mode:"buy",name:it.name,tgt:tgt,shares:buy,after:tot,cash:buy*P,
+            divNow:N*D,divAfter:tot*D,costNow:C};
   }
 
   function render(d,N,C,P){
