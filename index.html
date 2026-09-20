@@ -47,7 +47,9 @@ h1{
   font-family:var(--song); font-weight:700;
   font-size:26px; letter-spacing:.14em; margin:0 0 6px;
 }
-.lede{color:var(--ink2); font-size:14.5px; margin:0; max-width:46ch}
+.lede{color:var(--ink2); font-size:14.5px; margin:0 0 7px; max-width:46ch}
+.lede:last-child{margin-bottom:0}
+.lede.key{color:var(--ink); font-size:16px; padding-left:13px; border-left:3px solid var(--brass)}
 
 form{
   background:var(--card); border:1px solid var(--rule);
@@ -137,7 +139,7 @@ footer{
 
 <header>
   <h1>持仓成本计算器</h1>
-  <p class="lede">当你想减仓但是又不知道该留多少底仓的时候，可以在这里计算下</p>
+  <p class="lede key">当你想减仓但是又不知道该留多少底仓的时候，可以在这里计算下</p>
   <p class="lede">选好标的，填入持股与成本，算出要卖掉多少股才能把剩余持仓的成本降到目标位；成本已经够低时，反过来算还能补回多少股。</p>
 </header>
 
@@ -185,6 +187,7 @@ footer{
     {k:"601658",name:"邮储银行",dps:0.2285},
     {k:"601998",name:"中信银行",dps:0.3600},
     {k:"600036",name:"招商银行",dps:2.0160},
+    {k:"600900",name:"长江电力",dps:1.0000},
     {k:"600941",name:"中国移动",dps:4.7037},
     {k:"601318",name:"中国平安",dps:2.7300},
     {k:"601088",name:"中国神华",dps:2.0100},
